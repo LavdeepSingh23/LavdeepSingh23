@@ -139,7 +139,10 @@ ACM Student Chapter
 ## Activity
 
 <p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=LavdeepSingh23&hide_border=true&bg_color=00000000&color=666666&line=666666&point=000000" />
+  <img
+    src="https://github-readme-activity-graph.vercel.app/graph?username=LavdeepSingh23&theme=github-dark&hide_border=true"
+    alt="GitHub Activity Graph"
+  />
 </p>
 
 ---
@@ -183,7 +186,12 @@ sleep schedule    under active development
 
 Profile views:
 
-![Profile Views](https://komarev.com/ghpvc/?username=LavdeepSingh23&style=flat-square&color=grey)
+<p align="center">
+  <img
+    src="https://komarev.com/ghpvc/?username=LavdeepSingh23&label=Profile%20Views&style=flat-square&color=grey"
+    alt="Profile Views"
+  />
+</p>
 
 ---
 
@@ -211,7 +219,7 @@ Mostly just to need less help the next time I build something.
 ## Connect
 
 [GitHub](https://github.com/LavdeepSingh23)  
-[LinkedIn](https://www.linkedin.com/in/lavdeep-singh-109802210/?isSelfProfile=true)  
+[LinkedIn](https://www.linkedin.com/)  
 [Email](mailto:its.lavdeep.singh@gmail.com)
 
 ---
