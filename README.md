@@ -1,7 +1,7 @@
 <p align="center">
 <picture>
-<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/LavdeepSingh23/LavdeepSingh23/main/assets/page-dark.svg">
-<img src="https://raw.githubusercontent.com/LavdeepSingh23/LavdeepSingh23/main/assets/page-light.svg" width="900" alt="Lavdeep Singh, B.Tech Computer Engineering at Thapar Institute, class of 2028. Notebooks into things that run. ML, data, research and software. IEEE ComputingCon 2025 paper with 94.6 percent accuracy and 92.9 percent F1. Winner of NioHack 2026 and QuantumHacks 2026, OOSC 4.0 finalist, HACKMOL 6.0 top 10. Projects: Enerlytics AI, AcadHub, Stack Overflow duplicate detection, diabetes prediction, EV battery remaining useful life.">
+<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/LavdeepSingh23/LavdeepSingh23/main/assests/page-dark.svg">
+<img src="https://raw.githubusercontent.com/LavdeepSingh23/LavdeepSingh23/main/assests/page-light.svg" width="900" alt="Lavdeep Singh, B.Tech Computer Engineering at Thapar Institute, class of 2028. Notebooks into things that run. ML, data, research and software. IEEE ComputingCon 2025 paper with 94.6 percent accuracy and 92.9 percent F1. Winner of NioHack 2026 and QuantumHacks 2026, OOSC 4.0 finalist, HACKMOL 6.0 top 10. Projects: Enerlytics AI, AcadHub, Stack Overflow duplicate detection, diabetes prediction, EV battery remaining useful life.">
 </picture>
 </p>
 
