@@ -2,7 +2,7 @@
 """Builds the one-page pixel README (assets/page-light.svg and assets/page-dark.svg).
 One continuous scene, no panels. Uses pxlib.py for the pixel font and themes.
 Run from the repo root:  python scripts/generate_page.py
-The avatar is lifted from assets/banner-light.svg / banner-dark.svg, so keep those files."""
+The avatar is read from assets/avatar.png (needs Pillow and numpy: pip install pillow numpy)."""
 import os, re, sys, math, random
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -65,12 +65,43 @@ def disc(cx, cy, r):
             if (x - cx) ** 2 + (y - cy) ** 2 <= r * r + r * 0.6}
 
 
-def avatar_svg(theme):
-    s = open(os.path.join(ROOT, 'assets', f'banner-{theme}.svg')).read()
-    s = re.sub(r'<metadata>.*?</metadata>', '', s, flags=re.S)
-    paths = re.findall(r'<path d="([^"]*)" fill="([^"]*)"', s)
-    lo, hi = (12, 25) if theme == 'light' else (22, 35)
-    return ''.join(f'<path d="{d}" fill="{f}"/>' for d, f in paths[lo:hi + 1])
+AV_COLS, AV_ROWS, AV_ROW0 = 69, 69, 4          # native pixel grid of assets/avatar.png (crop = head and shoulders)
+AV_B, AV_P = (26.34, 26.2), (16.5, 17.5)         # block size (x, y) and grid offset (x, y) of that image
+_AV_CACHE = {}
+
+def avatar_cells():
+    """Reads assets/avatar.png, samples it back down to its native pixel grid, and returns {color: cells}."""
+    if _AV_CACHE: return _AV_CACHE
+    from PIL import Image
+    import numpy as np
+    im = Image.open(os.path.join(ROOT, 'assets', 'avatar.png')).convert('RGB')
+    a = np.asarray(im)
+    H, W, _ = a.shape
+    grid = []
+    for j in range(AV_ROWS):
+        row = []
+        for i in range(AV_COLS):
+            cx = AV_P[0] + (i + 0.5) * AV_B[0]
+            cy = AV_P[1] + (AV_ROW0 + j - 0.5) * AV_B[1]
+            x0, x1 = int(max(0, cx - 6)), int(min(W, cx + 7)); y0_, y1 = int(max(0, cy - 6)), int(min(H, cy + 7))
+            row.append(tuple(int(v) for v in np.median(a[y0_:y1, x0:x1].reshape(-1, 3), axis=0)))
+        grid.append(row)
+    flat = Image.new('RGB', (AV_COLS, AV_ROWS))
+    flat.putdata([c for r in grid for c in r])
+    q = flat.quantize(colors=28, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB')
+    by = {}
+    for j in range(AV_ROWS):
+        for i in range(AV_COLS):
+            by.setdefault(px._hex(q.getpixel((i, j))), set()).add((i, j))
+    _AV_CACHE.update(by)
+    return _AV_CACHE
+
+def avatar_svg(theme, ax, ay):
+    frame = '#5a3fc0' if theme == 'light' else '#6d4bd8'
+    out = [px.P(px.cut_rect(ax, ay, ax + AV_COLS + 2, ay + AV_ROWS + 2, [1]), frame)]
+    for col, cells in avatar_cells().items():
+        out.append(px.P(px.shift(cells, ax + 1, ay + 1), col))
+    return ''.join(out)
 
 
 def hills(s, top):
@@ -111,9 +142,10 @@ def layout(s):
 
     # ------------------------------------------------------------------ hero
     y0 = 20
-    s.add(f'<g transform="translate({L * U - 14} {y0 * U - 16}) scale(0.6666667)">{avatar_svg(s.theme)}</g>')
-    s.occupy(L - 1, y0 - 1, L + 77, y0 + 76)
-    hx = L + 90
+    ay = y0 + 8
+    s.add(avatar_svg(s.theme, L, ay))
+    s.occupy(L - 1, ay - 1, L + AV_COLS + 3, ay + AV_ROWS + 3)
+    hx = L + AV_COLS + 18
     s.text('COMPUTER ENGINEERING . THAPAR INSTITUTE', hx, y0 + 2, 1, 'dim')
     name = px.safe('LAVDEEP SINGH')
     s.add(px.P(px.text_cells(name, hx + 1, y0 + 15, 3), c('cyan')))          # pixel drop shadow
