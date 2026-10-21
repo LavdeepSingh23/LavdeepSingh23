@@ -23,6 +23,10 @@ U = 2                      # one pixel cell = 2 screen px
 px.U = U
 px.G['@'] = [".###.", "#...#", "#.###", "#.#.#", "#.###", "#....", ".###."]
 
+# dark mode swaps the neon green for a retro coral (light mode keeps its deeper green)
+px.THEMES['dark']['green'] = '#ff8a7a'
+CORAL = '#ff8a7a'
+
 WC = 450                   # 450 cells * 2px = 900px wide
 L, R = 24, 426             # text column
 TRACK = 11                 # x of the path down the left side
@@ -88,7 +92,7 @@ class Page(px.Scene):
     # ---- dark: aurora, planets, shooting stars
     def aurora(self, grid, ribbons):
         rnd = random.Random(self.seed + 5); groups = {}
-        cols = ['#00e5a0', '#19e0c8', '#3dc8ff', '#7d9bff', '#9b8cff']
+        cols = ['#2fd0c0', '#3dc8ff', '#7d9bff', '#b48cff', '#ff8fb8']
         for base_y, amp, thick, strength, phase in ribbons:
             for x in range(self.wc):
                 crest = base_y + amp * math.sin(x / 80 + phase) + amp * 0.4 * math.sin(x / 27 + phase * 2)
@@ -208,10 +212,59 @@ def avatar_cells():
         for i in range(AV_COLS): _AV.setdefault(px._hex(q.getpixel((i, j))), set()).add((i, j))
     json.dump({c: sorted(v) for c, v in _AV.items()}, open(jp, 'w'), separators=(',', ':'))
     return _AV
+_SUBJ = {}
+def avatar_subject():
+    """Cuts the figure out of the avatar's purple background (flood fill from the edges, stopped by the black outline)."""
+    if _SUBJ: return _SUBJ
+    N = AV_COLS; grid = [[None] * N for _ in range(AV_ROWS)]
+    for col, cells in avatar_cells().items():
+        for i, j in cells: grid[j][i] = col
+    def rgb(h): return tuple(int(h[k:k + 2], 16) for k in (1, 3, 5))
+    def is_bg(col):
+        r, g, b = rgb(col); luma = .3 * r + .59 * g + .11 * b
+        return b - r >= 7 and 25 <= luma <= 95
+    bg, stack = set(), [(i, j) for j in range(AV_ROWS) for i in range(N) if (i in (0, N - 1) or j in (0, AV_ROWS - 1)) and is_bg(grid[j][i])]
+    while stack:
+        i, j = stack.pop()
+        if (i, j) in bg: continue
+        bg.add((i, j))
+        for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            x, y = i + a, j + b
+            if 0 <= x < N and 0 <= y < AV_ROWS and (x, y) not in bg and is_bg(grid[y][x]): stack.append((x, y))
+    subj = {(i, j) for j in range(AV_ROWS) for i in range(N)} - bg
+    comps, seen = [], set()                              # keep only the biggest connected piece (drops stray specks)
+    for c0 in subj:
+        if c0 in seen: continue
+        comp, st = set(), [c0]
+        while st:
+            c_ = st.pop()
+            if c_ in seen or c_ not in subj: continue
+            seen.add(c_); comp.add(c_)
+            st += [(c_[0] + a, c_[1] + b) for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        comps.append(comp)
+    subj = max(comps, key=len)
+    _SUBJ.update(cells=subj, grid=grid); return _SUBJ
+
 def avatar_svg(theme, ax, ay):
-    frame = '#5a3fc0' if theme == 'light' else '#6d4bd8'
-    out = [px.P(px.cut_rect(ax, ay, ax + AV_COLS + 2, ay + AV_ROWS + 2, [1]), frame)]
-    for col, cells in avatar_cells().items(): out.append(px.P(px.shift(cells, ax + 1, ay + 1), col))
+    sj = avatar_subject(); subj, grid = sj['cells'], sj['grid']; by = {}
+    rim = {(i, j) for i, j in subj if any((i + a, j + b) not in subj and 0 <= i + a < AV_COLS and 0 <= j + b < AV_ROWS - 6
+                                           for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
+    for i, j in subj:
+        if j >= AV_ROWS - 9 and px.bayer(i, j) >= (AV_ROWS - j) / 9.0: continue   # soft dithered fade at the bottom edge
+        col = grid[j][i]
+        if theme == 'dark' and (i, j) in rim and (i + j) % 2 == 0: col = '#6c78c8'   # dotted moonlight rim so the dark turban reads on a night sky
+        by.setdefault(col, set()).add((i + ax, j + ay))
+    cx, cy, out = ax + AV_COLS // 2, ay + 30, []
+    glow = {}
+    for y in range(cy - 46, cy + 46):                           # soft dithered halo behind the figure
+        for x in range(cx - 46, cx + 46):
+            d = math.hypot(x - cx, (y - cy) * 1.05) / 44.0
+            if d >= 1: continue
+            cov = (1 - d) ** 1.5 * 0.62
+            if px.bayer(x, y) < cov: glow.setdefault('in' if d < 0.55 else 'out', set()).add((x, y))
+    gc = {'dark': ('#323f94', '#222c70'), 'light': ('#fffaf0', '#fff1d6')}[theme]
+    out.append(px.P(glow.get('out', set()), gc[1]) + px.P(glow.get('in', set()), gc[0]))
+    out += [px.P(cells, col) for col, cells in by.items()]
     return ''.join(out)
 
 
@@ -365,7 +418,7 @@ SPR = ["..tttt..", ".tttttt.", "tttttttt", "tttttttt", ".ssssss.", ".gggggg.", "
 LEGS = (["..l..l..", "..l..l.."], ["...ll...", "...ll..."])
 def sprite_cells(frame, theme):
     pal = dict(t='#2a2a33' if theme == 'light' else '#4a4a66', s='#e0a67a', g='#0b0b10', b='#1a1a22',
-               h='#067a53' if theme == 'light' else '#00e5a0', l='#394156' if theme == 'light' else '#7d8da8')
+               h='#067a53' if theme == 'light' else CORAL, l='#394156' if theme == 'light' else '#7d8da8')
     by = {}
     for r, row in enumerate(SPR + list(LEGS[frame])):
         for cc, ch in enumerate(row):
@@ -408,6 +461,8 @@ def layout(s, live):
     def heading(n, title, color, y):
         nodes.append(y + 6)
         s.add(px.P(px.cut_rect(TRACK - 2, y + 5, TRACK + 2, y + 9, [0]), c(color)))
+        sh = px.shade(c(color), 0.38) if s.theme == 'dark' else px.shade(c(color), 1.9)
+        s.add(px.P(px.text_cells(px.safe(title), L + 1, y + 1, 2), sh))
         s.text(title, L, y, 2, color)
         s.text_r(f'{n:02d} / {TOTAL:02d}', R, y + 4, 1, 'dim')
         s.dotted(L, R, y + 19)
@@ -421,7 +476,7 @@ def layout(s, live):
 
     # ---------------------------------------------------------------- hero
     y0 = 20; ay = y0 + 8
-    s.add(avatar_svg(s.theme, L, ay)); s.occupy(L - 1, ay - 1, L + AV_COLS + 3, ay + AV_ROWS + 3)
+    s.add(avatar_svg(s.theme, L, ay)); s.occupy(L - 1, ay - 1, L + AV_COLS + 1, ay + AV_ROWS + 1)
     hx = L + AV_COLS + 18
     s.text('COMPUTER ENGINEERING . THAPAR INSTITUTE', hx, y0 + 2, 1, 'dim')
     name = px.safe('LAVDEEP SINGH')
@@ -625,7 +680,7 @@ def layout(s, live):
     return y
 
 
-LEVELS = {'dark': ['#0b5d3b', '#0f8f5b', '#00c47d', '#00e5a0'], 'light': ['#8fdcb8', '#4cc79a', '#1f9f6c', '#0a7f55']}
+LEVELS = {'dark': ['#5b2a5e', '#9a3a7c', '#e0527a', '#ff8a7a'], 'light': ['#8fdcb8', '#4cc79a', '#1f9f6c', '#0a7f55']}
 
 def game(s, live, y0):
     pitch, body, cols = 7, 5, live['cols']; gw = cols * pitch - 2
