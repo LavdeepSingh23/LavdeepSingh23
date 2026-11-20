@@ -2,7 +2,7 @@ name: Update live pixel page
 
 on:
   schedule:
-    - cron: "17 */6 * * *"   # every 6 hours
+    - cron: "17 */3 * * *"   # every 3 hours, so the sky follows the time of day
   workflow_dispatch:          # lets you run it by hand from the Actions tab
 
 permissions:
@@ -18,11 +18,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Rebuild the pixel page (streak, totals, commits, contribution invaders)
+      - name: Rebuild the pixel page (sky, weather, streak, activity, contribution invaders)
         run: python scripts/generate_page.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_USER: ${{ github.repository_owner }}
+          TZ_OFFSET_MIN: "330"   # India time (UTC+5:30). Change this if you want another timezone.
 
       - name: Commit updated page
         run: |
